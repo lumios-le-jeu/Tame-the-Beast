@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lean Canvas Risk Validator | Antigravity</title>
+  <meta name="description" content="Transform your startup idea into a validated action plan. Fill your Lean Canvas, qualify risks, and get a prioritized de-risking roadmap." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       DESIGN TOKENS
+    ============================================================ */
+    :root {
+      --bg-deep:        #f8fafc;
+      --bg-card:        #ffffff;
+      --bg-card-hover:  #f1f5f9;
+      --border:         rgba(0,0,0,0.08);
+      --border-active:  #4f8ef7;
+      --text-primary:   #1e293b;
+      --text-secondary: #475569;
+      --text-muted:     #94a3b8;
+      --accent:         #4f8ef7;
+      --accent-glow:    rgba(79,142,247,0.1);
+      --accent2:        #8b5cf6;
+      --success:        #10b981;
+
+      /* Risk-level palette */
+      --risk-violet: #9333ea;
+      --risk-red:    #ef4444;
+      --risk-yellow: #eab308;
+      --risk-orange: #f97316;
+      --risk-green:  #22c55e;
+
+      --radius:    12px;
+      --radius-sm: 8px;
+      --shadow:    0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background blobs */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -1;
+      background:
+        radial-gradient(ellipse 60% 50% at 10% 20%, rgba(79,142,247,0.04) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at 90% 80%, rgba(139,92,246,0.03) 0%, transparent 70%);
+    }
+
+    /* ============================================================
+       LAYOUT
+    ============================================================ */
+    .app-wrapper { max-width: 1400px; margin: 0 auto; padding: 0 20px 80px; }
+
+    /* ============================================================
+       HEADER / NAV
+    ============================================================ */
+    .top-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 0 16px;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(248,250,252,0.92);
+      backdrop-filter: blur(16px);
+      margin: 0 -20px; padding: 16px 20px;
+    }
+
+    .logo {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.15rem; font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: -0.3px;
+    }
+
+    .steps-nav {
+      display: flex; gap: 4px; align-items: center;
+    }
+
+    .step-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: 100px;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent; color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+    .step-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+    .step-btn.active {
+      background: rgba(79,142,247,0.12);
+      border-color: rgba(79,142,247,0.35);
+      color: var(--accent);
+    }
+    .step-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700;
+      background: #e2e8f0; color: #64748b;
+      transition: all 0.2s;
+    }
+    .step-btn.active .step-num {
+      background: var(--accent); color: #fff;
+    }
+
+    /* ============================================================
+       TIMER BAR
+    ============================================================ */
+    .timer-bar {
+      display: flex; align-items: center; gap: 16px;
+      padding: 14px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin: 20px 0;
+    }
+
+    .timer-display {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 2rem; font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 3px;
+      min-width: 110px;
+    }
+    .timer-display.running { color: var(--accent); }
+
+    .timer-label {
+      font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;
+      flex: 1;
+    }
+
+    .timer-controls { display: flex; gap: 8px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 18px; border-radius: 100px;
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; border: 1px solid transparent;
+      transition: all 0.18s; white-space: nowrap;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #3b7de8);
+      color: #fff; border-color: transparent;
+      box-shadow: 0 0 0 0 var(--accent-glow);
+    }
+    .btn-primary:hover { box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent; color: var(--text-secondary);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+    .btn-danger { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.25); }
+    .btn-danger:hover { background: rgba(239,68,68,0.2); }
+
+    /* ============================================================
+       VIEWS (step panels)
+    ============================================================ */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ============================================================
+       STEP 1 — LEAN CANVAS
+    ============================================================ */
+    .canvas-intro {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; gap: 16px;
+    }
+    .canvas-intro h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.3rem; font-weight: 700;
+    }
+    .canvas-intro p { font-size: 0.85rem; color: var(--text-secondary); margin-top: 3px; }
+
+    .canvas-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: auto auto auto;
+      gap: 8px;
+    }
+
+    /* Box placement (Lean Canvas order) */
+    /* Row 1: Problem(2 rows), Solution(2 rows), UVP(2 rows), Unfair Advantage(2 rows), Customer Segments(2 rows) */
+    /* Row 3: Key Metrics(spans 2), Channels(spans 2), Revenue(spans 1), Cost Structure(spans 4) */
+    .lc-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 14px 10px;
+      display: flex; flex-direction: column;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      min-height: 180px;
+      position: relative;
+      overflow: hidden;
+    }
+    .lc-box::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .lc-box.focused {
+      border-color: var(--border-active);
+      box-shadow: 0 0 0 1px var(--border-active), 0 0 24px rgba(99,179,237,0.1);
+    }
+    .lc-box.focused::before { opacity: 1; }
+
+    .lc-box-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px; cursor: pointer;
+    }
+    .lc-box-header:hover .lc-box-title { color: var(--accent); }
+    .lc-box-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--text-muted);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .lc-box-title::after {
+      content: 'ⓘ'; font-size: 0.75rem; opacity: 0.5;
+    }
+    .lc-box-order {
+      font-size: 0.65rem; font-weight: 700;
+      background: rgba(79,142,247,0.1); color: var(--accent);
+      padding: 2px 7px; border-radius: 100px;
+    }
+
+    .lc-textarea {
+      flex: 1; resize: none; background: transparent;
+      border: none; outline: none; color: var(--text-primary);
+      font-family: 'Inter', sans-serif; font-size: 0.85rem;
+      line-height: 1.6; width: 100%;
+      min-height: 110px;
+    }
+    .lc-textarea::placeholder { color: var(--text-muted); font-style: italic; }
+
+    /* Grid layout for lean canvas boxes */
+    #box-problem          { grid-column: 1; grid-row: 1 / 3; }
+    #box-solution         { grid-column: 2; grid-row: 1; }
+    #box-uvp              { grid-column: 3; grid-row: 1; }
+    #box-hlc              { grid-column: 3; grid-row: 2; }
+    #box-unfair           { grid-column: 4; grid-row: 1; }
+    #box-customers        { grid-column: 5; grid-row: 1 / 3; }
+    #box-metrics          { grid-column: 2; grid-row: 2; }
+    #box-channels         { grid-column: 4; grid-row: 2; }
+    #box-cost             { grid-column: 1 / 4; grid-row: 3; min-height: 100px; }
+    #box-revenue          { grid-column: 4 / 6; grid-row: 3; min-height: 100px; }
+
+    .next-step-row {
+      display: flex; justify-content: flex-end; align-items: center;
+      gap: 12px; margin-top: 12px;
+    }
+    .step-progress {
+      font-size: 0.8rem; color: var(--text-muted);
+    }
+
+    /* ============================================================
+       STEP 2 — RISK EVALUATION
+    ============================================================ */
+    .risk-header { margin-bottom: 20px; }
+    .risk-header h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.3rem; font-weight: 700; margin-bottom: 4px;
+    }
+    .risk-header p { font-size: 0.85rem; color: var(--text-secondary); }
+
+    .risk-legend {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 7px;
+      padding: 6px 12px; border-radius: 100px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      font-size: 0.78rem; color: var(--text-secondary);
+    }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    .risk-sections {
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .risk-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .risk-section-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 12px;
+    }
+
+    .bullet-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .bullet-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.2s;
+    }
+    .bullet-item:hover { border-color: rgba(255,255,255,0.12); }
+
+    .bullet-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--text-muted); cursor: pointer;
+      transition: transform 0.18s, box-shadow 0.18s;
+      flex-shrink: 0;
+    }
+    .bullet-dot:hover { transform: scale(1.3); }
+    .bullet-dot[data-risk="violet"] { background: var(--risk-violet); box-shadow: 0 0 8px var(--risk-violet); }
+    .bullet-dot[data-risk="red"]    { background: var(--risk-red);    box-shadow: 0 0 8px var(--risk-red); }
+    .bullet-dot[data-risk="yellow"] { background: var(--risk-yellow); box-shadow: 0 0 8px var(--risk-yellow); }
+    .bullet-dot[data-risk="orange"] { background: var(--risk-orange); box-shadow: 0 0 8px var(--risk-orange); }
+    .bullet-dot[data-risk="green"]  { background: var(--risk-green);  box-shadow: 0 0 8px var(--risk-green); }
+
+    .bullet-text { flex: 1; font-size: 0.86rem; color: var(--text-primary); }
+
+    .type-select {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-secondary); border-radius: var(--radius-sm);
+      padding: 4px 10px; font-size: 0.75rem; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      outline: none; transition: border-color 0.2s;
+    }
+    .type-select:hover, .type-select:focus { border-color: rgba(255,255,255,0.2); color: var(--text-primary); }
+    option { background: #1a2540; }
+
+    /* ============================================================
+       CONTEXT MENU
+    ============================================================ */
+    .context-menu {
+      position: fixed; z-index: 999;
+      background: #141e30;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 8px;
+      box-shadow: var(--shadow);
+      min-width: 280px;
+      animation: fadeInScale 0.15s ease;
+    }
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .context-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      color: var(--text-muted); letter-spacing: 1px;
+      padding: 4px 8px 8px;
+    }
+    .context-option {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px; border-radius: var(--radius-sm);
+      cursor: pointer; transition: background 0.15s;
+    }
+    .context-option:hover { background: rgba(255,255,255,0.06); }
+    .context-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .context-label { font-size: 0.82rem; font-weight: 500; color: var(--text-primary); }
+    .context-desc  { font-size: 0.73rem; color: var(--text-secondary); margin-left: auto; text-align: right; max-width: 140px; }
+
+    /* ============================================================
+       STEP 3 — PRIORITIZATION
+    ============================================================ */
+    .prio-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+
+    .profile-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: sticky; top: 80px;
+    }
+    .profile-card h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem; font-weight: 700; margin-bottom: 4px;
+    }
+    .profile-card p { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px; }
+
+    .slider-group { display: flex; flex-direction: column; gap: 18px; }
+
+    .slider-item {}
+    .slider-label {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .slider-name {
+      font-size: 0.82rem; font-weight: 600; color: var(--text-primary);
+    }
+    .slider-val {
+      font-size: 0.82rem; font-weight: 700; color: var(--accent);
+      min-width: 18px; text-align: right;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none; width: 100%; height: 4px;
+      border-radius: 2px; background: var(--border);
+      outline: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow);
+      cursor: pointer; transition: transform 0.15s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    .slider-marks { display: flex; justify-content: space-between; margin-top: 4px; }
+    .slider-mark { font-size: 0.65rem; color: var(--text-muted); }
+
+    .calc-btn-row { margin-top: 20px; }
+
+    /* Risk Table */
+    .risk-table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .risk-table-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .risk-table-header h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem; font-weight: 700;
+    }
+    .score-count {
+      font-size: 0.78rem; color: var(--text-muted);
+      background: rgba(255,255,255,0.04);
+      padding: 4px 12px; border-radius: 100px;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      padding: 12px 16px;
+      text-align: left; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    td {
+      padding: 12px 16px; font-size: 0.85rem; vertical-align: middle;
+    }
+
+    .score-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 100px;
+      font-weight: 700; font-size: 0.82rem;
+    }
+
+    .test-input {
+      width: 100%; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text-primary); padding: 8px 12px;
+      font-family: 'Inter', sans-serif; font-size: 0.82rem;
+      outline: none; transition: border-color 0.2s;
+    }
+    .test-input::placeholder { color: var(--text-muted); }
+    .test-input:focus { border-color: rgba(79,142,247,0.4); }
+
+    /* Type badge */
+    .type-badge {
+      display: inline-block;
+      padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 600;
+    }
+    .type-product  { background: rgba(167,139,250,0.15); color: #a78bfa; }
+    .type-market   { background: rgba(79,142,247,0.15);  color: #4f8ef7; }
+    .type-customer { background: rgba(52,211,153,0.15);  color: #34d399; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: var(--text-muted); font-size: 0.9rem;
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+    /* ============================================================
+       TOAST
+    ============================================================ */
+    .toast-container {
+      position: fixed; bottom: 24px; right: 24px;
+      z-index: 1000; display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      background: #141e30; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm); padding: 10px 16px;
+      font-size: 0.82rem; color: var(--text-primary);
+      box-shadow: var(--shadow);
+      animation: slideIn 0.25s ease;
+      display: flex; align-items: center; gap: 8px;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ============================================================
+       SAVE INDICATOR
+    ============================================================ */
+    .save-indicator {
+      font-size: 0.72rem; color: var(--text-muted);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 900px) {
+      .canvas-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto;
+      }
+      #box-problem, #box-solution, #box-uvp,
+      #box-unfair, #box-customers, #box-metrics,
+      #box-channels, #box-cost, #box-revenue {
+        grid-column: auto; grid-row: auto;
+      }
+      .prio-layout { grid-template-columns: 1fr; }
+      .profile-card { position: static; }
+    }
+
+    @media (max-width: 600px) {
+      .canvas-grid { grid-template-columns: 1fr; }
+      .steps-nav { display: none; }
+      .timer-display { font-size: 1.4rem; }
+    }
+    /* Modal Styling */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px); z-index: 2000;
+      display: none; align-items: center; justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal-card {
+      background: var(--bg-card); border-radius: var(--radius);
+      width: 90%; max-width: 500px; padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      border: 1px solid var(--border);
+      position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .modal-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+    .modal-close { cursor: pointer; font-size: 1.5rem; color: var(--text-muted); transition: color 0.2s; }
+    .modal-close:hover { color: var(--risk-red); }
+
+    .modal-content { font-size: 0.95rem; line-height: 1.6; color: var(--text-primary); }
+    .modal-content ul { margin-top: 12px; padding-left: 20px; }
+    .modal-content li { margin-bottom: 8px; }
+    .modal-footer { margin-top: 24px; text-align: right; }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     TOP BAR
+============================================================ -->
+<div class="top-bar">
+  <div class="logo">⚡ Lean Canvas Risk Validator</div>
+
+  <nav class="steps-nav">
+    <button class="step-btn active" onclick="goToStep(1)" id="nav-step1">
+      <span class="step-num">1</span> Canvas
+    </button>
+    <button class="step-btn" onclick="goToStep(2)" id="nav-step2">
+      <span class="step-num">2</span> Risk Assessment
+    </button>
+    <button class="step-btn" onclick="goToStep(3)" id="nav-step3">
+      <span class="step-num">3</span> Prioritization
+    </button>
+  </nav>
+
+  <div class="save-indicator" id="saveIndicator">
+    <span class="save-dot"></span> Auto-saved
+  </div>
+</div>
+
+<div class="app-wrapper">
+
+  <!-- ============================================================
+       TIMER BAR (always visible)
+  ============================================================ -->
+  <div class="timer-bar">
+    <div>
+      <div class="timer-display" id="timerDisplay">00:00</div>
+      <div class="timer-label">Session Timer</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="timer-controls">
+      <button class="btn btn-primary" id="timerPlayBtn" onclick="timerToggle()">▶ Play</button>
+      <button class="btn btn-ghost" onclick="timerReset()">⟳ Reset</button>
+      <span style="font-size:0.8rem;color:var(--text-muted);margin-left:8px;">
+        Total sessions: <strong id="totalSessions" style="color:var(--text-primary)">0</strong> &nbsp;|&nbsp;
+        Best time: <strong id="bestTime" style="color:var(--accent)">—</strong>
+      </span>
+    </div>
+    <div style="border-left: 1px solid var(--border); height: 30px; margin: 0 8px;"></div>
+    <div class="timer-controls">
+      <button class="btn btn-primary" onclick="focusNext()">Next Field →</button>
+      <span class="step-progress" id="focusLabel" style="font-size: 0.75rem; color: var(--text-muted); width: 140px;">Step 1 / 10</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       STEP 1 — LEAN CANVAS
+  ============================================================ -->
+  <div class="view active" id="view-step1">
+    <div class="canvas-intro">
+      <div>
+        <h2>📋 Lean Canvas</h2>
+        <p>Fill in all 9 boxes without stopping. Use the "Next Step" button to move through them in order.</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost" onclick="clearCanvas()" style="font-size:0.78rem;">🗑 Clear all</button>
+        <button class="btn btn-primary" onclick="goToStep(2)">Continue to Risk Assessment →</button>
+      </div>
+    </div>
+
+    <div class="canvas-grid">
+
+      <div class="lc-box" id="box-problem">
+        <div class="lc-box-header" onclick="showTutorial('problem')">
+          <span class="lc-box-title">Problem</span>
+          <span class="lc-box-order">Step 1</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-problem"
+          placeholder="1. Problem #1&#10;2. Problem #2&#10;3. Problem #3"
+          oninput="enforceNumberedList(this); saveData()"></textarea>
+      </div>
+
+      <div class="lc-box" id="box-solution">
+        <div class="lc-box-header" onclick="showTutorial('solution')">
+          <span class="lc-box-title">Solution</span>
+          <span class="lc-box-order">Step 3</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-solution"
+          placeholder="1. Solution #1&#10;2. Solution #2&#10;3. Solution #3"
+          oninput="enforceNumberedList(this); saveData()"></textarea>
+      </div>
+
+      <div class="lc-box" id="box-uvp">
+        <div class="lc-box-header" onclick="showTutorial('uvp')">
+          <span class="lc-box-title">UVP</span>
+          <span class="lc-box-order">Step 4</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-uvp"
+          placeholder="Clear, compelling message that says how you are different and worth buying..."
+          oninput="saveData()"></textarea>
+      </div>
+
+      <div class="lc-box" id="box-hlc">
+        <div class="lc-box-header" onclick="showTutorial('hlc')">
+          <span class="lc-box-title">High Level Concept</span>
+          <span class="lc-box-order">Step 5</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-hlc"
+          placeholder="Your X for Y analogy (e.g. YouTube for Dogs)..."
+          oninput="saveData()"></textarea>
+      </div>
+
+      <div class="lc-box" id="box-unfair">
+        <div class="lc-box-header" onclick="showTutorial('unfair')">
+          <span class="lc-box-title">Unfair Advantage</span>
+          <span class="lc-box-order">Step 9</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-unfair"
+          placeholder="Something that cannot easily be bought or copied..."
+          oninput="saveData()"></textarea>
+      </div>
+
+      <div class="lc-box" id="box-customers">
+        <div class="lc-box-header" onclick="showTutorial('customers')">
+          <span class="lc-box-title">Customer Segments</span>
+          <span class="lc-box-order">Step 2</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-customers"
+          placeholder="Who are your target customers and users?&#10;&#10;Early adopters: ..."
+          oninput="saveData()"></textarea>
+      </div>
+
+      <div class="lc-box" id="box-metrics">
+        <div class="lc-box-header" onclick="showTutorial('metrics')">
+          <span class="lc-box-title">Key Metrics</span>
+          <span class="lc-box-order">Step 8</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-metrics"
+          placeholder="Key activities you measure to track success..."
+          oninput="saveData()"></textarea>
+      </div>
+
+      <div class="lc-box" id="box-channels">
+        <div class="lc-box-header" onclick="showTutorial('channels')">
+          <span class="lc-box-title">Channels</span>
+          <span class="lc-box-order">Step 7</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-channels"
+          placeholder="Path to customers — how do you reach them?..."
+          oninput="saveData()"></textarea>
+      </div>
+
+      <div class="lc-box" id="box-cost">
+        <div class="lc-box-header" onclick="showTutorial('cost')">
+          <span class="lc-box-title">Cost Structure</span>
+          <span class="lc-box-order">Step 10</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-cost"
+          placeholder="Customer acquisition costs, distribution, hosting, people..."
+          oninput="saveData()"></textarea>
+      </div>
+
+      <div class="lc-box" id="box-revenue">
+        <div class="lc-box-header" onclick="showTutorial('revenue')">
+          <span class="lc-box-title">Revenue Streams</span>
+          <span class="lc-box-order">Step 6</span>
+        </div>
+        <textarea class="lc-textarea" id="ta-revenue"
+          placeholder="Revenue model, lifetime value, revenue, gross margin..."
+          oninput="saveData()"></textarea>
+      </div>
+
+    </div><!-- /canvas-grid -->
+
+    <!-- Next Field row removed and moved to header -->
+
+  </div><!-- /view-step1 -->
+
+  <!-- ============================================================
+       STEP 2 — RISK ASSESSMENT
+  ============================================================ -->
+  <div class="view" id="view-step2">
+    <div class="risk-header">
+      <h2>🎯 Risk Assessment</h2>
+      <p>Click on any bullet (●) to set its risk level. Assign a type (Product / Market / Customer) for each hypothesis.</p>
+    </div>
+
+    <div class="risk-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--risk-violet)"></div> Extreme — Not tested + intuition of impossibility</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--risk-red)"></div> High — Not tested + high risk intuition</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--risk-yellow)"></div> Medium — Not tested + low risk intuition</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--risk-orange)"></div> Moderate — Field surveys done, no sale yet</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--risk-green)"></div> Low — Pre-sold before product existed</div>
+    </div>
+
+    <div class="risk-sections" id="riskSections">
+      <!-- Generated dynamically from canvas content -->
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;">
+      <button class="btn btn-ghost" onclick="goToStep(1)">← Back to Canvas</button>
+      <button class="btn btn-primary" onclick="goToStep(3)">Continue to Prioritization →</button>
+    </div>
+  </div><!-- /view-step2 -->
+
+  <!-- ============================================================
+       STEP 3 — PRIORITIZATION
+  ============================================================ -->
+  <div class="view" id="view-step3">
+
+    <div style="margin-bottom:20px;">
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">
+        🚀 Risk Prioritization
+      </h2>
+      <p style="font-size:0.85rem;color:var(--text-secondary);">
+        Set your entrepreneurial risk profile, then generate your de-risking action plan.
+      </p>
+    </div>
+
+    <div class="prio-layout">
+
+      <!-- Profile Card -->
+      <div class="profile-card">
+        <h3>Risk Profile Weights</h3>
+        <p>Adjust the weight (1–3) for each risk type based on your current focus.</p>
+
+        <div class="slider-group">
+          <div class="slider-item">
+            <div class="slider-label">
+              <span class="slider-name">📦 Product Risk</span>
+              <span class="slider-val" id="wProduct">2</span>
+            </div>
+            <input type="range" id="sliderProduct" min="1" max="3" step="1" value="2"
+              oninput="document.getElementById('wProduct').textContent=this.value" />
+            <div class="slider-marks"><span class="slider-mark">1 Low</span><span class="slider-mark">2</span><span class="slider-mark">3 High</span></div>
+          </div>
+          <div class="slider-item">
+            <div class="slider-label">
+              <span class="slider-name">📊 Market Risk</span>
+              <span class="slider-val" id="wMarket">2</span>
+            </div>
+            <input type="range" id="sliderMarket" min="1" max="3" step="1" value="2"
+              oninput="document.getElementById('wMarket').textContent=this.value" />
+            <div class="slider-marks"><span class="slider-mark">1 Low</span><span class="slider-mark">2</span><span class="slider-mark">3 High</span></div>
+          </div>
+          <div class="slider-item">
+            <div class="slider-label">
+              <span class="slider-name">👥 Customer Risk</span>
+              <span class="slider-val" id="wCustomer">2</span>
+            </div>
+            <input type="range" id="sliderCustomer" min="1" max="3" step="1" value="2"
+              oninput="document.getElementById('wCustomer').textContent=this.value" />
+            <div class="slider-marks"><span class="slider-mark">1 Low</span><span class="slider-mark">2</span><span class="slider-mark">3 High</span></div>
+          </div>
+        </div>
+
+        <div class="calc-btn-row">
+          <button class="btn btn-primary" style="width:100%" onclick="calculateRisks()">
+            ⚡ Generate Priority Table
+          </button>
+        </div>
+
+        <div style="margin-top:12px;">
+          <button class="btn btn-ghost" style="width:100%;font-size:0.78rem" onclick="exportData()">
+            ⬇ Export JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Risk Table -->
+      <div class="risk-table-card">
+        <div class="risk-table-header">
+          <h3>Mitigation Roadmap</h3>
+          <span class="score-count" id="riskCount">0 hypotheses</span>
+        </div>
+        <div id="riskTableContainer">
+          <div class="empty-state">
+            <div class="empty-icon">🧮</div>
+            Click "Generate Priority Table" to compute your risk scores.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /prio-layout -->
+
+  </div><!-- /view-step3 -->
+
+</div><!-- /app-wrapper -->
+
+<!-- Context Menu (risk picker) -->
+<div class="context-menu" id="contextMenu" style="display:none">
+  <div class="context-title">Set Risk Level</div>
+  <div class="context-option" onclick="setRisk('violet')">
+    <div class="context-dot" style="background:var(--risk-violet)"></div>
+    <div>
+      <div class="context-label">🟣 Extreme</div>
+      <div class="context-desc" style="color:var(--text-muted);font-size:0.73rem">Not tested — insurmountable risk</div>
+    </div>
+  </div>
+  <div class="context-option" onclick="setRisk('red')">
+    <div class="context-dot" style="background:var(--risk-red)"></div>
+    <div>
+      <div class="context-label">🔴 High</div>
+      <div class="context-desc" style="color:var(--text-muted);font-size:0.73rem">Not tested — high risk intuition</div>
+    </div>
+  </div>
+  <div class="context-option" onclick="setRisk('yellow')">
+    <div class="context-dot" style="background:var(--risk-yellow)"></div>
+    <div>
+      <div class="context-label">🟡 Medium</div>
+      <div class="context-desc" style="color:var(--text-muted);font-size:0.73rem">Not tested — low risk intuition</div>
+    </div>
+  </div>
+  <div class="context-option" onclick="setRisk('orange')">
+    <div class="context-dot" style="background:var(--risk-orange)"></div>
+    <div>
+      <div class="context-label">🟠 Moderate</div>
+      <div class="context-desc" style="color:var(--text-muted);font-size:0.73rem">Field surveys done — no sale yet</div>
+    </div>
+  </div>
+  <div class="context-option" onclick="setRisk('green')">
+    <div class="context-dot" style="background:var(--risk-green)"></div>
+    <div>
+      <div class="context-label">🟢 Low</div>
+      <div class="context-desc" style="color:var(--text-muted);font-size:0.73rem">Pre-sold before product existed</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutorial Modal -->
+<div class="modal-backdrop" id="tutorialModal" onclick="closeModal(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Tutorial</div>
+      <div class="modal-close" onclick="closeModal()">×</div>
+    </div>
+    <div class="modal-content" id="modalContent">
+      <!-- Logic content -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal()">Got it!</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================ -->
+<script>
+// ============================================================
+// CONSTANTS & STATE
+// ============================================================
+const BOXES = [
+  { id: 'problem',   label: 'Problem',                 step: 1, isBullet: true  },
+  { id: 'customers', label: 'Customer Segments',       step: 2, isBullet: false },
+  { id: 'solution',  label: 'Solution',                step: 3, isBullet: true  },
+  { id: 'uvp',       label: 'UVP',                     step: 4, isBullet: false },
+  { id: 'hlc',       label: 'High Level Concept',      step: 5, isBullet: false },
+  { id: 'revenue',   label: 'Revenue Streams',         step: 6, isBullet: false },
+  { id: 'channels',  label: 'Channels',                step: 7, isBullet: false },
+  { id: 'metrics',   label: 'Key Metrics',             step: 8, isBullet: false },
+  { id: 'unfair',    label: 'Unfair Advantage',        step: 9, isBullet: false },
+  { id: 'cost',      label: 'Cost Structure',          step: 10, isBullet: false },
+];
+
+const RISK_VALUES  = { violet: 5, red: 4, yellow: 3, orange: 2, green: 1 };
+const RISK_COLORS  = { violet: '#9333ea', red: '#ef4444', yellow: '#eab308', orange: '#f97316', green: '#22c55e' };
+const RISK_LABELS  = { violet: 'Extreme', red: 'High', yellow: 'Medium', orange: 'Moderate', green: 'Low' };
+
+let currentFocusIndex = -1; // -1 so first focusNext() lands on index 0
+let currentStep = 1;
+
+// Risk data: { boxId_lineIndex : { risk, type } }
+let riskData = {};
+
+// timer
+let timerSeconds = 0;
+let timerRunning = false;
+let timerInterval = null;
+
+// Context menu target
+let contextTarget = null; // { boxId, lineIndex, dotEl }
+
+// ============================================================
+// STORAGE
+// ============================================================
+const STORAGE_KEY = 'lean_canvas_v2';
+
+function saveData() {
+  const payload = {
+    canvas: {},
+    risks: riskData,
+    timer: timerSeconds,
+    sessions: parseInt(document.getElementById('totalSessions').textContent) || 0,
+    bestTime: document.getElementById('bestTime').textContent,
+    weights: {
+      product:  document.getElementById('sliderProduct').value,
+      market:   document.getElementById('sliderMarket').value,
+      customer: document.getElementById('sliderCustomer').value,
+    },
+    testPaths: getTestPaths(),
+    focusIndex: currentFocusIndex,
+  };
+  BOXES.forEach(b => {
+    payload.canvas[b.id] = document.getElementById('ta-' + b.id).value;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  flashSave();
+}
+
+function loadData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  try {
+    const d = JSON.parse(raw);
+    if (d.canvas) {
+      BOXES.forEach(b => {
+        if (d.canvas[b.id] !== undefined) {
+          document.getElementById('ta-' + b.id).value = d.canvas[b.id];
+        }
+      });
+    }
+    if (d.risks) riskData = d.risks;
+    if (d.timer) { timerSeconds = d.timer; updateTimerDisplay(); }
+    if (d.sessions) document.getElementById('totalSessions').textContent = d.sessions;
+    if (d.bestTime) document.getElementById('bestTime').textContent = d.bestTime;
+    if (d.weights) {
+      if (d.weights.product)  { document.getElementById('sliderProduct').value  = d.weights.product;  document.getElementById('wProduct').textContent  = d.weights.product; }
+      if (d.weights.market)   { document.getElementById('sliderMarket').value   = d.weights.market;   document.getElementById('wMarket').textContent   = d.weights.market; }
+      if (d.weights.customer) { document.getElementById('sliderCustomer').value = d.weights.customer; document.getElementById('wCustomer').textContent = d.weights.customer; }
+    }
+    // Test paths are restored when table is generated
+    if (d.testPaths) window._savedTestPaths = d.testPaths;
+  } catch(e) { console.warn('Failed to load saved data', e); }
+}
+
+function getTestPaths() {
+  const paths = {};
+  document.querySelectorAll('.test-input').forEach(el => {
+    paths[el.dataset.key] = el.value;
+  });
+  return paths;
+}
+
+let saveFlashTimeout;
+function flashSave() {
+  const el = document.getElementById('saveIndicator');
+  el.style.color = 'var(--success)';
+  clearTimeout(saveFlashTimeout);
+  saveFlashTimeout = setTimeout(() => { el.style.color = ''; }, 1500);
+}
+
+// ============================================================
+// TIMER
+// ============================================================
+function timerToggle() {
+  if (timerRunning) {
+    timerRunning = false;
+    clearInterval(timerInterval);
+    document.getElementById('timerPlayBtn').textContent = '▶ Play';
+    document.getElementById('timerDisplay').classList.remove('running');
+  } else {
+    timerRunning = true;
+    timerInterval = setInterval(() => {
+      timerSeconds++;
+      updateTimerDisplay();
+      if (timerSeconds % 30 === 0) saveData();
+    }, 1000);
+    document.getElementById('timerPlayBtn').textContent = '⏸ Pause';
+    document.getElementById('timerDisplay').classList.add('running');
+  }
+}
+
+function timerReset() {
+  if (timerRunning) timerToggle();
+  // Record session
+  const sessions = parseInt(document.getElementById('totalSessions').textContent) || 0;
+  document.getElementById('totalSessions').textContent = sessions + 1;
+  // Track longest session (most complete canvas work)
+  const best = document.getElementById('bestTime').textContent;
+  if (timerSeconds > 0) {
+    const formatted = formatTime(timerSeconds);
+    if (best === '—' || timerSeconds > parseTime(best)) {
+      document.getElementById('bestTime').textContent = formatted;
+    }
+  }
+  timerSeconds = 0;
+  updateTimerDisplay();
+  saveData();
+  showToast('⟳ Session recorded. New session started!');
+}
+
+function updateTimerDisplay() {
+  document.getElementById('timerDisplay').textContent = formatTime(timerSeconds);
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+}
+
+function parseTime(str) {
+  const [m, s] = str.split(':').map(Number);
+  return m * 60 + s;
+}
+
+// ============================================================
+// STEP NAVIGATION
+// ============================================================
+function goToStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-step' + n).classList.add('active');
+  document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-step' + n).classList.add('active');
+
+  if (n === 2) buildRiskView();
+  if (n === 3) { /* wait for user to click calculate */ }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================================
+// STEP 1: CANVAS LOGIC
+// ============================================================
+function focusNext() {
+  currentFocusIndex = (currentFocusIndex + 1) % BOXES.length;
+  const box = BOXES[currentFocusIndex];
+  const ta = document.getElementById('ta-' + box.id);
+
+  document.querySelectorAll('.lc-box').forEach(b => b.classList.remove('focused'));
+  document.getElementById('box-' + box.id).classList.add('focused');
+  ta.focus();
+  // Scroll box into view
+  document.getElementById('box-' + box.id).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  const isLast = currentFocusIndex === BOXES.length - 1;
+  document.getElementById('focusLabel').textContent =
+    isLast
+      ? `✅ All fields visited! (${BOXES.length}/${BOXES.length})`
+      : `Currently focused: ${box.label} (${currentFocusIndex + 1} / ${BOXES.length})`;
+
+  saveData();
+}
+
+function enforceNumberedList(textarea) {
+  // On Enter in problem/solution, auto-add next number
+  // We just validate the format lightly; the placeholder guides the user
+}
+
+// Handle Enter key in problem/solution to auto-number
+document.addEventListener('DOMContentLoaded', () => {
+  ['ta-problem', 'ta-solution'].forEach(id => {
+    const ta = document.getElementById(id);
+    
+    // Auto-add 1. if empty and focused
+    ta.addEventListener('focus', () => {
+      if (ta.value.trim() === '') {
+        ta.value = '1. ';
+        ta.dispatchEvent(new Event('input'));
+      }
+    });
+
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const val = ta.value;
+        const cursorPos = ta.selectionStart;
+        const textBefore = val.substring(0, cursorPos);
+        const textAfter = val.substring(cursorPos);
+        
+        const lines = textBefore.split('\n');
+        const lastLine = lines[lines.length - 1];
+        const match = lastLine.match(/^(\d+)\./);
+        
+        if (match) {
+          e.preventDefault();
+          const nextNum = parseInt(match[1]) + 1;
+          ta.value = textBefore + '\n' + nextNum + '. ' + textAfter;
+          const newPos = cursorPos + String(nextNum).length + 3;
+          ta.setSelectionRange(newPos, newPos);
+          ta.dispatchEvent(new Event('input'));
+        }
+      }
+    });
+  });
+
+  // Initial focus on Problem box
+  document.getElementById('box-problem').classList.add('focused');
+  document.getElementById('focusLabel').textContent = `Step 1 / ${BOXES.length}`;
+
+  loadData();
+  // Restore focus index from storage if present
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try {
+      const d = JSON.parse(raw);
+      if (typeof d.focusIndex === 'number') currentFocusIndex = d.focusIndex;
+    } catch(e) {}
+  }
+});
+
+function clearCanvas() {
+  if (!confirm('Clear all canvas content? This cannot be undone.')) return;
+  BOXES.forEach(b => { document.getElementById('ta-' + b.id).value = ''; });
+  riskData = {};
+  saveData();
+  showToast('🗑 Canvas cleared.');
+}
+
+// ============================================================
+// STEP 2: RISK VIEW
+// ============================================================
+// ============================================================
+// TUTORIALS
+// ============================================================
+const TUTORIAL_DATA = {
+  problem: {
+    title: "Problem",
+    content: "List the top 1-3 problems your customers face.<ul><li>What is the biggest pain point?</li><li>How do they solve it today (Existing Alternatives)?</li><li>Why is the current way broken?</li></ul>"
+  },
+  customers: {
+    title: "Customer Segments",
+    content: "Define your target users.<ul><li>Who is the 'Early Adopter'? (The person who needs this NOW).</li><li>Be specific: 'Student entrepreneurs' vs 'Students'.</li></ul>"
+  },
+  solution: {
+    title: "Solution",
+    content: "Top 3 features that solve the problems listed.<ul><li>Keep it simple.</li><li>No jargon.</li><li>How does it fix the pain?</li></ul>"
+  },
+  uvp: {
+    title: "UVP (Unique Value Proposition)",
+    content: "Single, clear, compelling message.<ul><li>Why are you different?</li><li>Why should people pay attention?</li></ul>"
+  },
+  hlc: {
+    title: "High Level Concept",
+    content: "Your X for Y analogy.<ul><li>'Uber for Laundry'.</li><li>'Airbnb for Dogs'.</li><li>Makes your idea instantly understandable.</li></ul>"
+  },
+  channels: {
+    title: "Channels",
+    content: "How will you reach your customers?<ul><li>Social media, direct sales, partnerships?</li><li>Free vs Paid?</li></ul>"
+  },
+  revenue: {
+    title: "Revenue Streams",
+    content: "How will you make money?<ul><li>Subscription, transactional fee, or one-time sale?</li><li>What is the lifetime value of a customer?</li></ul>"
+  },
+  cost: {
+    title: "Cost Structure",
+    content: "List your fixed and variable costs.<ul><li>Customer acquisition costs (CAC).</li><li>Hosting, people, distribution.</li></ul>"
+  },
+  metrics: {
+    title: "Key Metrics",
+    content: "The key numbers that tell you if you're succeeding.<ul><li>Active users, retention, revenue?</li><li>Pick 1-3 maximum.</li></ul>"
+  },
+  unfair: {
+    title: "Unfair Advantage",
+    content: "Something that cannot be easily copied or bought.<ul><li>Inside information, expert team, community?</li><li>'First to market' is rarely enough.</li></ul>"
+  }
+};
+
+function showTutorial(key) {
+  const data = TUTORIAL_DATA[key];
+  if (!data) return;
+  
+  document.getElementById('modalTitle').textContent = data.title;
+  document.getElementById('modalContent').innerHTML = data.content;
+  document.getElementById('tutorialModal').style.display = 'flex';
+}
+
+function closeModal(e) {
+  document.getElementById('tutorialModal').style.display = 'none';
+}
+function buildRiskView() {
+  const container = document.getElementById('riskSections');
+  container.innerHTML = '';
+
+  BOXES.forEach(box => {
+    const content = document.getElementById('ta-' + box.id).value.trim();
+    if (!content) return;
+
+    const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+
+    const section = document.createElement('div');
+    section.className = 'risk-section';
+    section.innerHTML = `<div class="risk-section-title">${box.label}</div>`;
+
+    const list = document.createElement('div');
+    list.className = 'bullet-list';
+
+    lines.forEach((line, idx) => {
+      const key = box.id + '_' + idx;
+      const savedRisk = riskData[key] ? riskData[key].risk : null;
+      const savedType = riskData[key] ? riskData[key].type : '';
+
+      const item = document.createElement('div');
+      item.className = 'bullet-item';
+      item.dataset.key = key;
+
+      const dot = document.createElement('div');
+      dot.className = 'bullet-dot';
+      dot.title = 'Click to set risk level';
+      if (savedRisk) dot.dataset.risk = savedRisk;
+
+      const text = document.createElement('div');
+      text.className = 'bullet-text';
+      text.textContent = line;
+
+      const typeSelect = document.createElement('select');
+      typeSelect.className = 'type-select';
+      typeSelect.innerHTML = `
+        <option value="">Type</option>
+        <option value="Product">📦 Product</option>
+        <option value="Market">📊 Market</option>
+        <option value="Customer">👥 Customer</option>
+      `;
+      typeSelect.value = savedType;
+      typeSelect.addEventListener('change', () => {
+        if (!riskData[key]) riskData[key] = {};
+        riskData[key].type = typeSelect.value;
+        riskData[key].text = line;
+        riskData[key].box  = box.label;
+        saveData();
+      });
+
+      dot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showContextMenu(e, key, dot, line, box.label);
+      });
+
+      item.appendChild(dot);
+      item.appendChild(text);
+      item.appendChild(typeSelect);
+      list.appendChild(item);
+    });
+
+    section.appendChild(list);
+    container.appendChild(section);
+  });
+
+  if (!container.children.length) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📝</div>
+      Your canvas is empty. Go back to Step 1 and fill in your hypotheses.
+    </div>`;
+  }
+}
+
+// ============================================================
+// CONTEXT MENU
+// ============================================================
+function showContextMenu(e, key, dotEl, text, boxLabel) {
+  contextTarget = { key, dotEl, text, boxLabel };
+  const menu = document.getElementById('contextMenu');
+  menu.style.display = 'block';
+
+  // Position near click
+  let x = e.clientX, y = e.clientY;
+  if (x + 300 > window.innerWidth) x = window.innerWidth - 310;
+  if (y + 260 > window.innerHeight) y = y - 260;
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+}
+
+function setRisk(level) {
+  if (!contextTarget) return;
+  const { key, dotEl, text, boxLabel } = contextTarget;
+
+  dotEl.dataset.risk = level;
+
+  if (!riskData[key]) riskData[key] = {};
+  riskData[key].risk  = level;
+  riskData[key].text  = text;
+  riskData[key].box   = boxLabel;
+
+  // Also save type if already selected
+  const item = dotEl.closest('.bullet-item');
+  if (item) {
+    const sel = item.querySelector('.type-select');
+    if (sel) { riskData[key].type = sel.value; }
+  }
+
+  saveData();
+  hideContextMenu();
+  showToast(`Risk set to ${RISK_LABELS[level]}`, RISK_COLORS[level]);
+}
+
+function hideContextMenu() {
+  document.getElementById('contextMenu').style.display = 'none';
+  contextTarget = null;
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#contextMenu') && !e.target.classList.contains('bullet-dot')) {
+    hideContextMenu();
+  }
+});
+
+// ============================================================
+// STEP 3: PRIORITIZATION
+// ============================================================
+function calculateRisks() {
+  const wp = parseInt(document.getElementById('sliderProduct').value);
+  const wm = parseInt(document.getElementById('sliderMarket').value);
+  const wc = parseInt(document.getElementById('sliderCustomer').value);
+
+  // Collect all rated items
+  const items = [];
+  Object.entries(riskData).forEach(([key, data]) => {
+    if (!data.risk || !data.type) return; // skip unrated or untyped
+    const colorVal = RISK_VALUES[data.risk] || 0;
+    let weight = 1;
+    if (data.type === 'Product')  weight = wp;
+    if (data.type === 'Market')   weight = wm;
+    if (data.type === 'Customer') weight = wc;
+    const score = colorVal * weight;
+    items.push({ key, text: data.text, risk: data.risk, type: data.type, box: data.box, score, colorVal, weight });
+  });
+
+  // Sort descending
+  items.sort((a, b) => b.score - a.score);
+
+  const container = document.getElementById('riskTableContainer');
+  document.getElementById('riskCount').textContent = items.length + ' hypotheses';
+
+  if (!items.length) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🎯</div>
+      No rated & typed hypotheses found. Go to Step 2 and set risk levels + types.
+    </div>`;
+    return;
+  }
+
+  // Build table
+  const savedPaths = window._savedTestPaths || {};
+
+  let html = `<table>
+    <thead>
+      <tr>
+        <th style="width:40px">#</th>
+        <th>Hypothesis</th>
+        <th style="width:90px">Source</th>
+        <th style="width:80px">Type</th>
+        <th style="width:110px">Risk Score</th>
+        <th style="min-width:220px">Test Path</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  items.forEach((item, idx) => {
+    const savedPath = savedPaths[item.key] || '';
+    const typeCls = 'type-' + item.type.toLowerCase();
+    html += `<tr>
+      <td style="color:var(--text-muted);font-size:0.8rem">${idx + 1}</td>
+      <td>${escHtml(item.text)}</td>
+      <td style="font-size:0.76rem;color:var(--text-muted)">${escHtml(item.box)}</td>
+      <td><span class="type-badge ${typeCls}">${item.type}</span></td>
+      <td>
+        <span class="score-badge" style="background:${RISK_COLORS[item.risk]}22;color:${RISK_COLORS[item.risk]}">
+          <span style="width:8px;height:8px;border-radius:50%;background:${RISK_COLORS[item.risk]};display:inline-block"></span>
+          ${item.score} pts
+        </span>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-top:3px">${item.colorVal} × ${item.weight}</div>
+      </td>
+      <td>
+        <input class="test-input" data-key="${item.key}" placeholder="How will you test this risk?" value="${escHtml(savedPath)}" oninput="saveData()" />
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  saveData();
+  showToast(`⚡ ${items.length} risks prioritized!`);
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) { showToast('Nothing to export yet.'); return; }
+
+  const blob = new Blob([raw], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'lean-canvas-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('⬇ JSON exported!');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showToast(msg, color) {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  if (color) t.style.borderLeftColor = color;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+</script>
+</body>
+</html>
