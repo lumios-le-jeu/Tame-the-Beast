@@ -483,9 +483,18 @@
       display: inline-block;
       padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 600;
     }
-    .type-product  { background: rgba(167,139,250,0.15); color: #a78bfa; }
+    .type-product  { background: rgba(139,92,246,0.15);  color: #8b5cf6; }
     .type-market   { background: rgba(79,142,247,0.15);  color: #4f8ef7; }
     .type-customer { background: rgba(52,211,153,0.15);  color: #34d399; }
+
+    .type-select {
+      background: #f1f5f9; color: var(--text-primary);
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 4px 8px; font-size: 0.75rem; cursor: pointer;
+      outline: none; transition: border-color 0.2s;
+    }
+    .type-select:hover { border-color: var(--accent); }
+    .type-select option { background: var(--bg-card); color: var(--text-primary); }
 
     /* Post-test dot picker */
     .post-test-picker { display: flex; gap: 4px; }
@@ -615,8 +624,8 @@
     <button class="step-btn" onclick="goToStep(2)" id="nav-step2">
       <span class="step-num">2</span> Risk Assessment
     </button>
-    <button class="step-btn" onclick="goToStep(4)" id="nav-step4">
-      <span class="step-num">4</span> Visual Map
+    <button class="step-btn" onclick="goToStep(3)" id="nav-step3">
+      <span class="step-num">3</span> Roadmap & Map
     </button>
   </nav>
 
@@ -645,7 +654,7 @@
       </span>
     </div>
     <div style="border-left: 1px solid var(--border); height: 30px; margin: 0 8px;"></div>
-    <div class="timer-controls">
+    <div class="timer-controls" id="nextFieldControls" style="display: flex; align-items: center; gap: 8px;">
       <button class="btn btn-primary" onclick="focusNext()">Next Field →</button>
       <span class="step-progress" id="focusLabel" style="font-size: 0.75rem; color: var(--text-muted); width: 140px;">Step 1 / 10</span>
     </div>
@@ -878,40 +887,41 @@
           </div>
         </div>
       </div>
-
     </div><!-- /prio-layout -->
+
+    <!-- STEP 4 INTEGRATED: 3D Visual Map -->
+    <div style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border);">
+      <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">
+            👁️ 3D Risk Cloud
+          </h2>
+          <p style="font-size:0.85rem;color:var(--text-secondary);">
+            Visual projection of your roadmap. X=Product, Y=Market, Z=Customer. Sphere size = Risk Score.
+          </p>
+        </div>
+        <div style="display:flex; gap:12px; font-size:0.75rem; color:var(--text-secondary); margin-bottom: 5px;">
+           <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-violet);"></span> Extreme</span>
+           <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-red);"></span> High</span>
+           <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-yellow);"></span> Medium</span>
+           <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-orange);"></span> Moderate</span>
+           <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-green);"></span> Low</span>
+        </div>
+      </div>
+
+      <div id="riskCanvasContainer">
+        <div id="three-tooltip"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px; display:flex; justify-content: space-between; align-items:center;">
+       <button class="btn btn-ghost" onclick="goToStep(2)">← Back to Assessment</button>
+       <button class="btn btn-primary" onclick="exportData()">⬇ Export Plan (JSON)</button>
+    </div>
 
   </div><!-- /view-step3 -->
 
-  <!-- ============================================================
-       STEP 4 — VISUAL MAP
-  ============================================================ -->
-  <div class="view" id="view-step4">
-    <div style="margin-bottom:20px;">
-      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">
-        👁️ 3D Risk Cloud
-      </h2>
-      <p style="font-size:0.85rem;color:var(--text-secondary);">
-        Hypotheses mapped by category: X=Product, Y=Market, Z=Customer. Sphere size = Risk Score.
-      </p>
-    </div>
-
-    <div id="riskCanvasContainer">
-      <div id="three-tooltip"></div>
-    </div>
-
-    <div style="margin-top:20px; display:flex; gap:16px; align-items:center;">
-       <div style="display:flex; gap:12px; font-size:0.75rem; color:var(--text-secondary);">
-         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-violet);"></span> Extreme</span>
-         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-red);"></span> High</span>
-         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-yellow);"></span> Medium</span>
-         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-orange);"></span> Moderate</span>
-         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-green);"></span> Low</span>
-       </div>
-       <div style="flex:1"></div>
-       <button class="btn btn-ghost" onclick="goToStep(3)">← Back to Roadmap</button>
-    </div>
-  </div><!-- /view-step4 -->
+  <!-- Step 4 removed, now merged with Step 3 -->
 
 </div><!-- /app-wrapper -->
 
@@ -1225,34 +1235,35 @@ function animate() {
 }
 
 function populateSpheres() {
-  // Use calculateRisks results
   const items = getCalculatedItems();
   
   items.forEach((item, idx) => {
+    // Determine color/score based on Post-Test Risk if available, else original risk
+    const finalRisk = item.postRisk || item.risk;
+    const finalVal  = RISK_VALUES[finalRisk] || item.colorVal;
+    
     const geo = new THREE.SphereGeometry(item.score * 0.08 + 0.2, 32, 32);
     const mat = new THREE.MeshPhongMaterial({ 
-      color: RISK_COLORS[item.risk],
+      color: RISK_COLORS[finalRisk],
       transparent: true,
       opacity: 0.8,
       shininess: 100
     });
     const sphere = new THREE.Mesh(geo, mat);
     
-    // Position based on Type
-    // Offset slightly for jitter
     const jitterX = (Math.random() - 0.5) * 1.5;
     const jitterY = (Math.random() - 0.5) * 1.5;
     const jitterZ = (Math.random() - 0.5) * 1.5;
     
     let x = jitterX, y = jitterY, z = jitterZ;
-    const dist = item.score * 0.8;
+    const dist = (finalVal * item.weight) * 0.8;
     
     if (item.type === 'Product')  x = dist + jitterX;
     if (item.type === 'Market')   y = dist + jitterY;
     if (item.type === 'Customer') z = dist + jitterZ;
     
     sphere.position.set(x, y, z);
-    sphere.userData = item;
+    sphere.userData = { ...item, finalRisk };
     
     scene.add(sphere);
     spheres.push(sphere);
@@ -1271,7 +1282,11 @@ function getCalculatedItems() {
     if (data.type === 'Product')  weight = wp;
     if (data.type === 'Market')   weight = wm;
     if (data.type === 'Customer') weight = wc;
-    items.push({ text: data.text, risk: data.risk, type: data.type, score: colorVal * weight });
+    items.push({ 
+      text: data.text, risk: data.risk, type: data.type, 
+      score: colorVal * weight, postRisk: data.postTestRisk,
+      colorVal: colorVal, weight: weight, box: data.box
+    });
   });
   return items;
 }
@@ -1280,6 +1295,7 @@ function getCalculatedItems() {
 // STEP NAVIGATION
 // ============================================================
 function goToStep(n) {
+  currentFocusIndex = -1; // Reset navigation index when changing views
   currentStep = n;
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-step' + n).classList.add('active');
@@ -1287,8 +1303,14 @@ function goToStep(n) {
   const btn = document.getElementById('nav-step' + n);
   if (btn) btn.classList.add('active');
 
+  // Show/Hide Next Field based on Step 1
+  document.getElementById('nextFieldControls').style.display = (n === 1) ? 'flex' : 'none';
+
   if (n === 2) buildRiskView();
-  if (n === 4) setTimeout(init3D, 100);
+  if (n === 3) {
+    calculateRisks();
+    setTimeout(init3D, 150);
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1654,6 +1676,9 @@ function calculateRisks() {
 
   saveData();
   showToast(`⚡ ${items.length} risks prioritized!`);
+  
+  // Also refresh 3D if visible
+  if (currentStep === 3) init3D();
 }
 
 // ============================================================
