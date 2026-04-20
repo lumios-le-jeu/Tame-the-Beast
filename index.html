@@ -958,9 +958,12 @@
           </button>
         </div>
 
-        <div style="margin-top:12px;">
-          <button class="btn btn-ghost" style="width:100%;font-size:0.78rem" onclick="exportData()">
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="btn btn-ghost" style="flex:1; font-size:0.7rem; padding:8px;" onclick="exportData()">
             ⬇ Export JSON
+          </button>
+          <button class="btn btn-ghost" style="flex:1; font-size:0.7rem; padding:8px;" onclick="downloadSummary()">
+            📄 Text Summary
           </button>
         </div>
       </div>
@@ -988,7 +991,7 @@
             👁️ 3D Risk Cloud
           </h2>
           <p style="font-size:0.85rem;color:var(--text-secondary);">
-            Visual projection of your roadmap. X=Product, Y=Market, Z=Customer. Sphere size = Risk Score.
+            Visual projection of your roadmap. Height = Risk Score. Columns = Category.
           </p>
         </div>
         <div style="display:flex; gap:12px; font-size:0.75rem; color:var(--text-secondary); margin-bottom: 5px;">
@@ -1644,54 +1647,9 @@ function enforceNumberedList(textarea) {
 }
 
 // Handle Enter key in problem/solution to auto-number
-document.addEventListener('DOMContentLoaded', () => {
-  ['ta-problem', 'ta-solution'].forEach(id => {
-    const ta = document.getElementById(id);
-    
-    // Auto-add 1. if empty and focused
-    ta.addEventListener('focus', () => {
-      if (ta.value.trim() === '') {
-        ta.value = '1. ';
-        ta.dispatchEvent(new Event('input'));
-      }
-    });
-
-    ta.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const val = ta.value;
-        const cursorPos = ta.selectionStart;
-        const textBefore = val.substring(0, cursorPos);
-        const textAfter = val.substring(cursorPos);
-        
-        const lines = textBefore.split('\n');
-        const lastLine = lines[lines.length - 1];
-        const match = lastLine.match(/^(\d+)\./);
-        
-        if (match) {
-          e.preventDefault();
-          const nextNum = parseInt(match[1]) + 1;
-          ta.value = textBefore + '\n' + nextNum + '. ' + textAfter;
-          const newPos = cursorPos + String(nextNum).length + 3;
-          ta.setSelectionRange(newPos, newPos);
-          ta.dispatchEvent(new Event('input'));
-        }
-      }
-    });
-  });
-
   // Initial focus on Problem box
   document.getElementById('box-problem').classList.add('focused');
   document.getElementById('focusLabel').textContent = `Step 1 / ${BOXES.length}`;
-
-  loadData();
-  // Restore focus index from storage if present
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    try {
-      const d = JSON.parse(raw);
-      if (typeof d.focusIndex === 'number') currentFocusIndex = d.focusIndex;
-    } catch(e) {}
-  }
 });
 
 function clearCanvas() {
@@ -2018,17 +1976,59 @@ function calculateRisks() {
 // EXPORT
 // ============================================================
 function exportData() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) { showToast('Nothing to export yet.'); return; }
+  if (!activeProjectId) return;
+  const proj = library.find(p => p.id === activeProjectId);
+  if (!proj) { showToast('Project not found.'); return; }
 
-  const blob = new Blob([raw], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(proj.data, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href = url;
-  a.download = 'lean-canvas-' + new Date().toISOString().slice(0, 10) + '.json';
+  const fileName = (proj.name || 'lean-canvas').replace(/\s+/g, '-').toLowerCase();
+  a.download = fileName + '-' + new Date().toISOString().slice(0, 10) + '.json';
   a.click();
   URL.revokeObjectURL(url);
   showToast('⬇ JSON exported!');
+}
+
+function downloadSummary() {
+  if (!activeProjectId) return;
+  const proj = library.find(p => p.id === activeProjectId);
+  if (!proj) return;
+
+  let text = `LEAN CANVAS RISK SUMMARY: ${proj.name || 'Untitled'}\n`;
+  text += `Generated: ${new Date().toLocaleString()}\n`;
+  text += `==========================================\n\n`;
+
+  text += `--- CANVAS DATA ---\n`;
+  BOXES.forEach(b => {
+    const val = proj.data.canvas[b.id] || '(Empty)';
+    text += `[${b.label}]\n${val}\n\n`;
+  });
+
+  text += `--- PRIORITIZED RISKS ---\n`;
+  const items = getCalculatedItems();
+  if (!items.length) {
+    text += `No rated risks found.\n`;
+  } else {
+    items.sort((a,b) => b.score - a.score).forEach((item, i) => {
+      text += `${i+1}. [${item.score} pts] [${item.type}] ${item.riskDesc || item.text}\n`;
+      if (item.riskDesc) text += `   Source Hypothesis: ${item.text}\n`;
+      const path = proj.data.testPaths[item.key] || 'No test path defined.';
+      text += `   Test Path: ${path}\n`;
+      text += `   Current Risk: ${RISK_LABELS[item.postRisk || item.risk]}\n\n`;
+    });
+  }
+
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  const fileName = (proj.name || 'lean-canvas-summary').replace(/\s+/g, '-').toLowerCase();
+  a.download = fileName + '-summary.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('⬇ Summary downloaded!');
 }
 
 // ============================================================
@@ -2073,16 +2073,50 @@ function showToast(msg, color) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 1. Storage Init
   loadLibrary();
   
+  // 2. Handle Share / Import
   const handledShare = checkForSharedLink();
   if (!handledShare) {
-    // If we have an active project open it, else go to home
     if(activeProjectId) openProject(activeProjectId);
     else goToStep(0); 
   }
 
-  // Handle focus changes (tab cycling)...
+  // 3. UI logic (Step 1 helpers)
+  ['ta-problem', 'ta-solution'].forEach(id => {
+    const ta = document.getElementById(id);
+    if (!ta) return;
+    
+    ta.addEventListener('focus', () => {
+      if (ta.value.trim() === '') {
+        ta.value = '1. ';
+        ta.dispatchEvent(new Event('input'));
+      }
+    });
+
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const val = ta.value;
+        const cursorPos = ta.selectionStart;
+        const textBefore = val.substring(0, cursorPos);
+        const textAfter = val.substring(cursorPos);
+        const lines = textBefore.split('\n');
+        const lastLine = lines[lines.length - 1];
+        const match = lastLine.match(/^(\d+)\./);
+        if (match) {
+          e.preventDefault();
+          const nextNum = parseInt(match[1]) + 1;
+          ta.value = textBefore + '\n' + nextNum + '. ' + textAfter;
+          const newPos = cursorPos + String(nextNum).length + 3;
+          ta.setSelectionRange(newPos, newPos);
+          ta.dispatchEvent(new Event('input'));
+        }
+      }
+    });
+  });
+
+  // 4. Focus & Progress tracking
   BOXES.forEach((b, i) => {
     const el = document.getElementById('ta-' + b.id);
     if(el) {
@@ -2092,6 +2126,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
+
+  // 5. Initial UI State
+  document.getElementById('box-problem').classList.add('focused');
 });
 </script>
 </body>
