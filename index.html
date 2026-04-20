@@ -1453,36 +1453,13 @@ function init3D() {
   pointLight.position.set(15, 15, 15);
   scene.add(pointLight);
 
-  // Dynamic Axes based on weight
-  const wp = parseInt(document.getElementById('sliderProduct').value) || 3;
-  const wm = parseInt(document.getElementById('sliderMarket').value) || 3;
-  const wc = parseInt(document.getElementById('sliderCustomer').value) || 3;
-  
-  const lenX = (5 * wp) * 0.8 + 2;
-  const lenY = (5 * wm) * 0.8 + 2;
-  const lenZ = (5 * wc) * 0.8 + 2;
+  // Categorical Labels on Floor
+  scene.add(makeTextSprite("Product Risk", "#ef4444", new THREE.Vector3(-10, 0.5, 0)));
+  scene.add(makeTextSprite("Market Risk", "#22c55e", new THREE.Vector3(0, 0.5, 0)));
+  scene.add(makeTextSprite("Customer Risk", "#3b82f6", new THREE.Vector3(10, 0.5, 0)));
 
-  // Custom Axes
-  const materialX = new THREE.LineBasicMaterial({color: 0xef4444}); // red
-  const geomX = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(lenX,0,0)]);
-  scene.add(new THREE.Line(geomX, materialX));
-
-  const materialY = new THREE.LineBasicMaterial({color: 0x22c55e}); // green
-  const geomY = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,lenY,0)]);
-  scene.add(new THREE.Line(geomY, materialY));
-
-  const materialZ = new THREE.LineBasicMaterial({color: 0x3b82f6}); // blue
-  const geomZ = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,lenZ)]);
-  scene.add(new THREE.Line(geomZ, materialZ));
-
-  // Add labels
-  scene.add(makeTextSprite("Product Risk", "#ef4444", new THREE.Vector3(lenX + 3, 0, 0)));
-  scene.add(makeTextSprite("Market Risk", "#22c55e", new THREE.Vector3(0, lenY + 1, 0)));
-  scene.add(makeTextSprite("Customer Risk", "#3b82f6", new THREE.Vector3(0, 0, lenZ + 3)));
-
-  // Add Grid (shifted to positive quadrant)
-  const gridHelper = new THREE.GridHelper(50, 50, 0xccd6e0, 0xe2e8f0);
-  gridHelper.position.set(12.5, 0, 12.5);
+  // Add Grid floor
+  const gridHelper = new THREE.GridHelper(40, 40, 0xccd6e0, 0xe2e8f0);
   scene.add(gridHelper);
 
   populateSpheres();
@@ -1546,16 +1523,18 @@ function populateSpheres() {
     });
     const sphere = new THREE.Mesh(geo, mat);
     
-    const jitterX = (Math.random() - 0.5) * 1.5;
-    const jitterY = (Math.random() - 0.5) * 1.5;
-    const jitterZ = (Math.random() - 0.5) * 1.5;
+    const jitterX = (Math.random() - 0.5) * 2;
+    const jitterZ = (Math.random() - 0.5) * 3;
     
-    let x = jitterX, y = jitterY, z = jitterZ;
-    const dist = (finalVal * item.weight) * 0.8;
+    let x = jitterX;
+    if (item.type === 'Product')  x = -10 + jitterX;
+    if (item.type === 'Market')   x = 0 + jitterX;
+    if (item.type === 'Customer') x = 10 + jitterX;
     
-    if (item.type === 'Product')  x = dist + jitterX;
-    if (item.type === 'Market')   y = dist + jitterY;
-    if (item.type === 'Customer') z = dist + jitterZ;
+    // Y is strictly mapped to Score height
+    const calculatedScore = (finalVal * item.weight) * 0.8;
+    const y = calculatedScore + (Math.random() * 0.5); // Add slight Y jitter
+    const z = jitterZ;
     
     sphere.position.set(x, y, z);
     sphere.userData = { ...item, finalRisk };
@@ -1784,6 +1763,13 @@ function showTutorial(key) {
 function closeModal(e) {
   document.getElementById('tutorialModal').style.display = 'none';
 }
+function getAutoType(boxId) {
+  if (['problem', 'solution', 'metrics', 'uvp', 'hlc'].includes(boxId)) return 'Product';
+  if (['channels', 'customers'].includes(boxId)) return 'Customer';
+  if (['unfair', 'cost', 'revenue'].includes(boxId)) return 'Market';
+  return '';
+}
+
 function buildRiskView() {
   const container = document.getElementById('riskSections');
   container.innerHTML = '';
@@ -1805,7 +1791,15 @@ function buildRiskView() {
     lines.forEach((line, idx) => {
       const key = box.id + '_' + idx;
       const savedRisk = riskData[key] ? riskData[key].risk : null;
-      const savedType = riskData[key] ? riskData[key].type : '';
+      let savedType = riskData[key] ? riskData[key].type : '';
+      
+      if (!savedType) {
+        savedType = getAutoType(box.id);
+        if (!riskData[key]) riskData[key] = {};
+        riskData[key].type = savedType;
+        riskData[key].text = line;
+        riskData[key].box = box.label;
+      }
 
       const item = document.createElement('div');
       item.className = 'bullet-item';
@@ -2060,6 +2054,7 @@ function setPostRisk(el, level) {
   riskData[key].postTestRisk = level;
   saveData();
   showToast(`Post-test risk set to ${RISK_LABELS[level]}`);
+  if (currentStep === 3) init3D();
 }
 
 function escHtml(str) {
