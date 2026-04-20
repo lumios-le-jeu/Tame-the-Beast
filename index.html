@@ -1520,7 +1520,8 @@ function animate() {
     tooltip.style.left = (mouse.x + 1) * 50 + '%';
     tooltip.style.top = (-mouse.y + 1) * 50 + '%';
     tooltip.style.transform = 'translate(15px, -50%)';
-    tooltip.innerHTML = `<strong>${obj.userData.type} Risk</strong><br/>${obj.userData.text}<br/>Score: ${obj.userData.score}`;
+    const displayTxt = obj.userData.riskDesc ? obj.userData.riskDesc : obj.userData.text;
+    tooltip.innerHTML = `<strong>${obj.userData.type} Risk</strong><br/>${displayTxt}<br/>Score: ${obj.userData.score}`;
   } else {
     tooltip.style.display = 'none';
   }
@@ -1594,7 +1595,7 @@ function getCalculatedItems() {
     if (data.type === 'Market')   weight = wm;
     if (data.type === 'Customer') weight = wc;
     items.push({ 
-      text: data.text, risk: data.risk, type: data.type, 
+      text: data.text, riskDesc: data.riskDesc, risk: data.risk, type: data.type, 
       score: colorVal * weight, postRisk: data.postTestRisk,
       colorVal: colorVal, weight: weight, box: data.box
     });
@@ -1819,6 +1820,20 @@ function buildRiskView() {
       text.className = 'bullet-text';
       text.textContent = line;
 
+      const riskInput = document.createElement('input');
+      riskInput.className = 'test-input';
+      riskInput.style.flex = "1";
+      riskInput.style.marginLeft = "12px";
+      riskInput.style.minWidth = "200px";
+      riskInput.placeholder = "What is the risk?";
+      const savedRiskDesc = riskData[key] ? riskData[key].riskDesc : '';
+      riskInput.value = savedRiskDesc || '';
+      riskInput.addEventListener('input', () => {
+         if (!riskData[key]) riskData[key] = {};
+         riskData[key].riskDesc = riskInput.value;
+         saveData();
+      });
+
       const typeSelect = document.createElement('select');
       typeSelect.className = 'type-select';
       typeSelect.innerHTML = `
@@ -1843,6 +1858,7 @@ function buildRiskView() {
 
       item.appendChild(dot);
       item.appendChild(text);
+      item.appendChild(riskInput);
       item.appendChild(typeSelect);
       list.appendChild(item);
     });
@@ -1927,7 +1943,7 @@ function calculateRisks() {
     if (data.type === 'Market')   weight = wm;
     if (data.type === 'Customer') weight = wc;
     const score = colorVal * weight;
-    items.push({ key, text: data.text, risk: data.risk, type: data.type, box: data.box, score, colorVal, weight });
+    items.push({ key, text: data.text, riskDesc: data.riskDesc, risk: data.risk, type: data.type, box: data.box, score, colorVal, weight });
   });
 
   // Sort descending
@@ -1965,9 +1981,11 @@ function calculateRisks() {
     const savedPath = savedPaths[item.key] || '';
     const postRisk = (riskData[item.key] ? riskData[item.key].postTestRisk : null);
     const typeCls = 'type-' + item.type.toLowerCase();
+    const hypothesisDisplay = item.riskDesc ? `<strong>${escHtml(item.riskDesc)}</strong><div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Hypothesis: ${escHtml(item.text)}</div>` : escHtml(item.text);
+
     html += `<tr>
       <td style="color:var(--text-muted);font-size:0.8rem">${idx + 1}</td>
-      <td>${escHtml(item.text)}</td>
+      <td>${hypothesisDisplay}</td>
       <td style="font-size:0.76rem;color:var(--text-muted)">${escHtml(item.box)}</td>
       <td><span class="type-badge ${typeCls}">${item.type}</span></td>
       <td>
