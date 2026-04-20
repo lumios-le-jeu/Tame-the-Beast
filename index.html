@@ -1453,12 +1453,36 @@ function init3D() {
   pointLight.position.set(15, 15, 15);
   scene.add(pointLight);
 
-  // Add Axes Helpers (X=Red/Product, Y=Green/Market, Z=Blue/Customer)
-  const axesHelper = new THREE.AxesHelper(15);
-  scene.add(axesHelper);
+  // Dynamic Axes based on weight
+  const wp = parseInt(document.getElementById('sliderProduct').value) || 3;
+  const wm = parseInt(document.getElementById('sliderMarket').value) || 3;
+  const wc = parseInt(document.getElementById('sliderCustomer').value) || 3;
+  
+  const lenX = (5 * wp) * 0.8 + 2;
+  const lenY = (5 * wm) * 0.8 + 2;
+  const lenZ = (5 * wc) * 0.8 + 2;
 
-  // Add Grid
-  const gridHelper = new THREE.GridHelper(20, 20, 0xccd6e0, 0xe2e8f0);
+  // Custom Axes
+  const materialX = new THREE.LineBasicMaterial({color: 0xef4444}); // red
+  const geomX = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(lenX,0,0)]);
+  scene.add(new THREE.Line(geomX, materialX));
+
+  const materialY = new THREE.LineBasicMaterial({color: 0x22c55e}); // green
+  const geomY = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,lenY,0)]);
+  scene.add(new THREE.Line(geomY, materialY));
+
+  const materialZ = new THREE.LineBasicMaterial({color: 0x3b82f6}); // blue
+  const geomZ = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,lenZ)]);
+  scene.add(new THREE.Line(geomZ, materialZ));
+
+  // Add labels
+  scene.add(makeTextSprite("Product Risk", "#ef4444", new THREE.Vector3(lenX + 3, 0, 0)));
+  scene.add(makeTextSprite("Market Risk", "#22c55e", new THREE.Vector3(0, lenY + 1, 0)));
+  scene.add(makeTextSprite("Customer Risk", "#3b82f6", new THREE.Vector3(0, 0, lenZ + 3)));
+
+  // Add Grid (shifted to positive quadrant)
+  const gridHelper = new THREE.GridHelper(50, 50, 0xccd6e0, 0xe2e8f0);
+  gridHelper.position.set(12.5, 0, 12.5);
   scene.add(gridHelper);
 
   populateSpheres();
@@ -1538,6 +1562,23 @@ function populateSpheres() {
     scene.add(sphere);
     spheres.push(sphere);
   });
+}
+
+function makeTextSprite(message, color, position) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const context = canvas.getContext('2d');
+  context.font = "Bold 36px 'Inter', sans-serif";
+  context.fillStyle = color;
+  context.fillText(message, 10, 60);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  const sprite = new THREE.Sprite(spriteMaterial);
+  sprite.scale.set(12, 3, 1);
+  sprite.position.copy(position);
+  return sprite;
 }
 
 function getCalculatedItems() {
