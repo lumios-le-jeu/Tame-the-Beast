@@ -1647,10 +1647,6 @@ function enforceNumberedList(textarea) {
 }
 
 // Handle Enter key in problem/solution to auto-number
-  // Initial focus on Problem box
-  document.getElementById('box-problem').classList.add('focused');
-  document.getElementById('focusLabel').textContent = `Step 1 / ${BOXES.length}`;
-});
 
 function clearCanvas() {
   if (!confirm('Clear all canvas content? This cannot be undone.')) return;
