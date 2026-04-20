@@ -7,6 +7,8 @@
   <meta name="description" content="Transform your startup idea into a validated action plan. Fill your Lean Canvas, qualify risks, and get a prioritized de-risking roadmap." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <style>
     /* ============================================================
        DESIGN TOKENS
@@ -485,6 +487,30 @@
     .type-market   { background: rgba(79,142,247,0.15);  color: #4f8ef7; }
     .type-customer { background: rgba(52,211,153,0.15);  color: #34d399; }
 
+    /* Post-test dot picker */
+    .post-test-picker { display: flex; gap: 4px; }
+    .post-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--border); cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .post-dot:hover { transform: scale(1.2); }
+    .post-dot.active { border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3); }
+
+    /* Step 4: 3D Canvas */
+    #riskCanvasContainer {
+      width: 100%; height: 600px;
+      background: #f1f5f9; border-radius: var(--radius);
+      position: relative; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    #three-tooltip {
+      position: absolute; padding: 10px; background: rgba(30,41,59,0.9);
+      color: white; border-radius: 8px; font-size: 0.8rem;
+      pointer-events: none; display: none; z-index: 100;
+      max-width: 200px; line-height: 1.4;
+    }
+
     /* Empty state */
     .empty-state {
       text-align: center; padding: 60px 20px;
@@ -589,8 +615,8 @@
     <button class="step-btn" onclick="goToStep(2)" id="nav-step2">
       <span class="step-num">2</span> Risk Assessment
     </button>
-    <button class="step-btn" onclick="goToStep(3)" id="nav-step3">
-      <span class="step-num">3</span> Prioritization
+    <button class="step-btn" onclick="goToStep(4)" id="nav-step4">
+      <span class="step-num">4</span> Visual Map
     </button>
   </nav>
 
@@ -857,6 +883,36 @@
 
   </div><!-- /view-step3 -->
 
+  <!-- ============================================================
+       STEP 4 — VISUAL MAP
+  ============================================================ -->
+  <div class="view" id="view-step4">
+    <div style="margin-bottom:20px;">
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">
+        👁️ 3D Risk Cloud
+      </h2>
+      <p style="font-size:0.85rem;color:var(--text-secondary);">
+        Hypotheses mapped by category: X=Product, Y=Market, Z=Customer. Sphere size = Risk Score.
+      </p>
+    </div>
+
+    <div id="riskCanvasContainer">
+      <div id="three-tooltip"></div>
+    </div>
+
+    <div style="margin-top:20px; display:flex; gap:16px; align-items:center;">
+       <div style="display:flex; gap:12px; font-size:0.75rem; color:var(--text-secondary);">
+         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-violet);"></span> Extreme</span>
+         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-red);"></span> High</span>
+         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-yellow);"></span> Medium</span>
+         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-orange);"></span> Moderate</span>
+         <span style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--risk-green);"></span> Low</span>
+       </div>
+       <div style="flex:1"></div>
+       <button class="btn btn-ghost" onclick="goToStep(3)">← Back to Roadmap</button>
+    </div>
+  </div><!-- /view-step4 -->
+
 </div><!-- /app-wrapper -->
 
 <!-- Context Menu (risk picker) -->
@@ -1081,6 +1137,146 @@ function parseTime(str) {
 }
 
 // ============================================================
+// STEP 4: 3D VISUAL MAP
+// ============================================================
+let scene, camera, renderer, controls, spheres = [];
+let raycaster = new THREE.Raycaster();
+let mouse = new THREE.Vector2();
+
+function init3D() {
+  const container = document.getElementById('riskCanvasContainer');
+  if (!container) return;
+  
+  // Clean up previous
+  if (renderer) {
+    container.removeChild(renderer.domElement);
+    spheres = [];
+  }
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf8fafc);
+
+  camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+  camera.position.set(10, 10, 10);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  // Add Lights
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+  const pointLight = new THREE.PointLight(0xffffff, 0.5);
+  pointLight.position.set(15, 15, 15);
+  scene.add(pointLight);
+
+  // Add Axes Helpers (X=Red/Product, Y=Green/Market, Z=Blue/Customer)
+  const axesHelper = new THREE.AxesHelper(15);
+  scene.add(axesHelper);
+
+  // Add Grid
+  const gridHelper = new THREE.GridHelper(20, 20, 0xccd6e0, 0xe2e8f0);
+  scene.add(gridHelper);
+
+  populateSpheres();
+  animate();
+
+  window.addEventListener('resize', onWindowResize, false);
+  renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+}
+
+function onWindowResize() {
+  const container = document.getElementById('riskCanvasContainer');
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+}
+
+function onMouseMove(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  
+  // Tooltip logic
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(spheres);
+  const tooltip = document.getElementById('three-tooltip');
+  
+  if (intersects.length > 0) {
+    const obj = intersects[0].object;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (mouse.x + 1) * 50 + '%';
+    tooltip.style.top = (-mouse.y + 1) * 50 + '%';
+    tooltip.style.transform = 'translate(15px, -50%)';
+    tooltip.innerHTML = `<strong>${obj.userData.type} Risk</strong><br/>${obj.userData.text}<br/>Score: ${obj.userData.score}`;
+  } else {
+    tooltip.style.display = 'none';
+  }
+  
+  renderer.render(scene, camera);
+}
+
+function populateSpheres() {
+  // Use calculateRisks results
+  const items = getCalculatedItems();
+  
+  items.forEach((item, idx) => {
+    const geo = new THREE.SphereGeometry(item.score * 0.08 + 0.2, 32, 32);
+    const mat = new THREE.MeshPhongMaterial({ 
+      color: RISK_COLORS[item.risk],
+      transparent: true,
+      opacity: 0.8,
+      shininess: 100
+    });
+    const sphere = new THREE.Mesh(geo, mat);
+    
+    // Position based on Type
+    // Offset slightly for jitter
+    const jitterX = (Math.random() - 0.5) * 1.5;
+    const jitterY = (Math.random() - 0.5) * 1.5;
+    const jitterZ = (Math.random() - 0.5) * 1.5;
+    
+    let x = jitterX, y = jitterY, z = jitterZ;
+    const dist = item.score * 0.8;
+    
+    if (item.type === 'Product')  x = dist + jitterX;
+    if (item.type === 'Market')   y = dist + jitterY;
+    if (item.type === 'Customer') z = dist + jitterZ;
+    
+    sphere.position.set(x, y, z);
+    sphere.userData = item;
+    
+    scene.add(sphere);
+    spheres.push(sphere);
+  });
+}
+
+function getCalculatedItems() {
+  const wp = parseInt(document.getElementById('sliderProduct').value);
+  const wm = parseInt(document.getElementById('sliderMarket').value);
+  const wc = parseInt(document.getElementById('sliderCustomer').value);
+  const items = [];
+  Object.entries(riskData).forEach(([key, data]) => {
+    if (!data.risk || !data.type) return;
+    const colorVal = RISK_VALUES[data.risk] || 0;
+    let weight = 1;
+    if (data.type === 'Product')  weight = wp;
+    if (data.type === 'Market')   weight = wm;
+    if (data.type === 'Customer') weight = wc;
+    items.push({ text: data.text, risk: data.risk, type: data.type, score: colorVal * weight });
+  });
+  return items;
+}
+
+// ============================================================
 // STEP NAVIGATION
 // ============================================================
 function goToStep(n) {
@@ -1088,10 +1284,11 @@ function goToStep(n) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-step' + n).classList.add('active');
   document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('nav-step' + n).classList.add('active');
+  const btn = document.getElementById('nav-step' + n);
+  if (btn) btn.classList.add('active');
 
   if (n === 2) buildRiskView();
-  if (n === 3) { /* wait for user to click calculate */ }
+  if (n === 4) setTimeout(init3D, 100);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1415,13 +1612,15 @@ function calculateRisks() {
         <th style="width:90px">Source</th>
         <th style="width:80px">Type</th>
         <th style="width:110px">Risk Score</th>
-        <th style="min-width:220px">Test Path</th>
+        <th style="min-width:200px">Test Path</th>
+        <th style="width:120px">Post-Test Risk</th>
       </tr>
     </thead>
     <tbody>`;
 
   items.forEach((item, idx) => {
     const savedPath = savedPaths[item.key] || '';
+    const postRisk = (riskData[item.key] ? riskData[item.key].postTestRisk : null);
     const typeCls = 'type-' + item.type.toLowerCase();
     html += `<tr>
       <td style="color:var(--text-muted);font-size:0.8rem">${idx + 1}</td>
@@ -1437,6 +1636,15 @@ function calculateRisks() {
       </td>
       <td>
         <input class="test-input" data-key="${item.key}" placeholder="How will you test this risk?" value="${escHtml(savedPath)}" oninput="saveData()" />
+      </td>
+      <td>
+        <div class="post-test-picker" data-key="${item.key}">
+          <div class="post-dot ${postRisk==='violet'?'active':''}" style="background:var(--risk-violet)" onclick="setPostRisk(this,'violet')" title="Extreme"></div>
+          <div class="post-dot ${postRisk==='red'?'active':''}" style="background:var(--risk-red)" onclick="setPostRisk(this,'red')" title="High"></div>
+          <div class="post-dot ${postRisk==='yellow'?'active':''}" style="background:var(--risk-yellow)" onclick="setPostRisk(this,'yellow')" title="Medium"></div>
+          <div class="post-dot ${postRisk==='orange'?'active':''}" style="background:var(--risk-orange)" onclick="setPostRisk(this,'orange')" title="Moderate"></div>
+          <div class="post-dot ${postRisk==='green'?'active':''}" style="background:var(--risk-green)" onclick="setPostRisk(this,'green')" title="Low"></div>
+        </div>
       </td>
     </tr>`;
   });
@@ -1468,6 +1676,18 @@ function exportData() {
 // ============================================================
 // HELPERS
 // ============================================================
+function setPostRisk(el, level) {
+  const container = el.parentElement;
+  container.querySelectorAll('.post-dot').forEach(d => d.classList.remove('active'));
+  el.classList.add('active');
+  
+  const key = container.dataset.key;
+  if (!riskData[key]) riskData[key] = {};
+  riskData[key].postTestRisk = level;
+  saveData();
+  showToast(`Post-test risk set to ${RISK_LABELS[level]}`);
+}
+
 function escHtml(str) {
   if (!str) return '';
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
